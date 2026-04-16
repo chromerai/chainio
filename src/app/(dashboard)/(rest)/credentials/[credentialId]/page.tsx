@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/auth-utils";
 
 interface PageProps {
     params: Promise<{
-        credentialId: String;
+        credentialId: string;
     }>
 }
 
