@@ -5,26 +5,45 @@ import { createTRPCRouter, premiumProcedure, protectedProcedure } from "@/trpc/i
 import z from "zod";
 import { PAGINATION } from "@/config/constants";
 import { NodeType } from "@/generated/prisma/enums";
+import { inngest } from "@/inngest/client";
 
 
 export const workflowsRouter = createTRPCRouter(
     {
-        create: premiumProcedure.mutation(({ ctx }) => {
-            return prisma.workflow.create({
-                data: {
-                    name: generateSlug(3),
-                    userId: ctx.auth.user.id,
-                    nodes: {
-                        create: {
-                            type: NodeType.INITIAL,
-                            position: { x: 0, y: 0},
-                            name: NodeType.INITIAL,
+        execute: protectedProcedure
+            .input(z.object({ id: z.string() }))
+            .mutation( async ({ ctx, input }) => {
+                const workflow = await prisma.workflow.findFirstOrThrow({
+                    where: {
+                        id: input.id,
+                        userId: ctx.auth.user.id
+                    }
+                });
 
-                        },
-                    } 
-                }
-            })
-        }),
+                await inngest.send({
+                    name: "worflows/execute.workflows",
+                    data: {workflowId: input.id},
+                })
+
+                return workflow;
+            }),
+        create: premiumProcedure
+            .mutation(({ ctx }) => {
+                return prisma.workflow.create({
+                    data: {
+                        name: generateSlug(3),
+                        userId: ctx.auth.user.id,
+                        nodes: {
+                            create: {
+                                type: NodeType.INITIAL,
+                                position: { x: 0, y: 0},
+                                name: NodeType.INITIAL,
+
+                            },
+                        } 
+                    }
+                })
+            }),
         remove: protectedProcedure
             .input(z.object({ id: z.string() }))
             .mutation(({ ctx, input }) => {
@@ -34,7 +53,7 @@ export const workflowsRouter = createTRPCRouter(
                         userId: ctx.auth.user.id
                     }
                 })
-        }),
+            }),
         update: protectedProcedure
             .input(
                 z.object({ 
@@ -106,7 +125,7 @@ export const workflowsRouter = createTRPCRouter(
 
                     return workflow;
                 })
-        }),
+            }),
         updateName: protectedProcedure
             .input(z.object({ id: z.string(), name: z.string().min(1) }))
             .mutation(({ ctx, input}) => {
@@ -119,46 +138,46 @@ export const workflowsRouter = createTRPCRouter(
                         name: input.name
                     },
                 })
-        }),
+            }),
         getOne: protectedProcedure
             .input(z.object({ id: z.string() }))
             .query(async ({ ctx, input }) => {
-            const workflow = await prisma.workflow.findUniqueOrThrow({
-                where: {
-                    id: input.id,
-                    userId: ctx.auth.user.id,
-                },
-                include: {
-                    nodes: true,
-                    connections: true,
-                },
-            });
+                const workflow = await prisma.workflow.findUniqueOrThrow({
+                    where: {
+                        id: input.id,
+                        userId: ctx.auth.user.id,
+                    },
+                    include: {
+                        nodes: true,
+                        connections: true,
+                    },
+                });
 
-            // transforms server nodes into react flow compatible node;
-            const nodes: Node[] = workflow.nodes.map((node) => ({
-                id: node.id,
-                type: node.type,
-                position: node.position as { x: number, y: number},
-                data: (node.data as Record<string, unknown> ) || {},
-            }));
+                // transforms server nodes into react flow compatible node;
+                const nodes: Node[] = workflow.nodes.map((node) => ({
+                    id: node.id,
+                    type: node.type,
+                    position: node.position as { x: number, y: number},
+                    data: (node.data as Record<string, unknown> ) || {},
+                }));
 
-            // transforms server connections into react flow compatible edges;
-            const edges: Edge[] = workflow.connections.map((connection) => ({
-                id: connection.id,
-                source: connection.fromNodeId,
-                target: connection.toNodeId,
-                sourceHandle: connection.fromOutput,
-                targetHandle: connection.toInput,
-            }));
+                // transforms server connections into react flow compatible edges;
+                const edges: Edge[] = workflow.connections.map((connection) => ({
+                    id: connection.id,
+                    source: connection.fromNodeId,
+                    target: connection.toNodeId,
+                    sourceHandle: connection.fromOutput,
+                    targetHandle: connection.toInput,
+                }));
 
-            return {
-                id: workflow.id,
-                name: workflow.name,
-                nodes,
-                edges,
-            };
+                return {
+                    id: workflow.id,
+                    name: workflow.name,
+                    nodes,
+                    edges,
+                };
 
-        }),
+            }),
         getMany: protectedProcedure
             .input(z.object({
                 page: z.number().default(PAGINATION.DEFAULT_PAGE),
@@ -170,48 +189,49 @@ export const workflowsRouter = createTRPCRouter(
                 search: z.string().default(""),
             }))
             .query(async ({ ctx, input }) => {
-            const {page, pageSize, search} = input
+                const {page, pageSize, search} = input
 
-            const [items, totalCount] = await Promise.all([
-                prisma.workflow.findMany({
-                    skip: (page - 1) * pageSize,
-                    take: pageSize,
+                const [items, totalCount] = await Promise.all([
+                    prisma.workflow.findMany({
+                        skip: (page - 1) * pageSize,
+                        take: pageSize,
 
-                    where: {
-                        userId: ctx.auth.user.id,
-                        name: {
-                            contains: search,
-                            mode: "insensitive"
+                        where: {
+                            userId: ctx.auth.user.id,
+                            name: {
+                                contains: search,
+                                mode: "insensitive"
+                            },
                         },
-                    },
-                    orderBy: {
-                        updatedAt: "desc"
-                    }
-                }),
-                prisma.workflow.count({
-                    where: {
-                        userId: ctx.auth.user.id,
-                        name: {
-                            contains: search,
-                            mode: "insensitive"
-                        },
-                    }
-                })
-            ]);
+                        orderBy: {
+                            updatedAt: "desc"
+                        }
+                    }),
+                    prisma.workflow.count({
+                        where: {
+                            userId: ctx.auth.user.id,
+                            name: {
+                                contains: search,
+                                mode: "insensitive"
+                            },
+                        }
+                    })
+                ]);
 
-            const totalPages = Math.ceil(totalCount / pageSize);
-            const hasNextPage = page < totalPages;
-            const hasPreviousPage = page > 1;
+                const totalPages = Math.ceil(totalCount / pageSize);
+                const hasNextPage = page < totalPages;
+                const hasPreviousPage = page > 1;
             
-            return {
-                items,
-                page,
-                pageSize,
-                totalCount, 
-                totalPages,
-                hasNextPage,
-                hasPreviousPage,
-            };
-        }),
+                return {
+                    items,
+                    page,
+                    pageSize,
+                    totalCount, 
+                    totalPages,
+                    hasNextPage,
+                    hasPreviousPage,
+                };
+            }),
+        
     }
 )

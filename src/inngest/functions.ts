@@ -1,74 +1,52 @@
 // src/inngest/functions.ts
-import prisma from "@/lib/db";
+import { NonRetriableError } from "inngest";
 import { inngest } from "./client";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText } from "ai";
-import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from "@ai-sdk/anthropic"
+import prisma from "@/lib/db";
+import { topologicalSort } from "./utils";
+import { NodeType } from "@/generated/prisma/enums";
+import { getExecutor } from "@/features/executions/lib/executor-registry";
 
 
-
-const google = createGoogleGenerativeAI()
-const openai = createOpenAI()
-const anthropic = createAnthropic()
-
-export const execute = inngest.createFunction(
-  { id: "execute-ai" },
-  { event: "execute/ai" },
+export const executeWorkflow = inngest.createFunction(
+  { id: "execute-workflow" },
+  { event: "worflows/execute.workflows" },
   async ({ event, step }) => {
-    await step.sleep("pretend", "5s")
-    const { steps: geminiSteps } = await step.ai.wrap(
-      "gemini-generate-text",
-      generateText, 
-      {
-        model: google("gemini-2.5-flash"),
-        system: "You are a helpful assistant.",
-        prompt: "What is the importance of life! Give a concise answer!",
-        experimental_telemetry: {
-          isEnabled: true,
-          functionId: "joke_agent",
-          recordInputs: true,
-          recordOutputs: true,
+
+    const workflowId = event.data.workflowId;
+
+    if(!workflowId){
+      throw new NonRetriableError("Workflow ID is missing");
+    }
+    
+    const sortedNodes = await step.run("prepare-workflow", async () => {
+      const workflow = await prisma.workflow.findUniqueOrThrow({
+        where: {
+          id: workflowId,
         },
-      }
-    );
+        include: {
+          nodes: true,
+          connections: true,
+        },
+      });
 
-    const { steps: openAiSteps } = await step.ai.wrap(
-      "openai-generate-text",
-      generateText, 
-      {
-        model: openai("gpt-4o"),
-        system: "You are a helpful assistant.",
-        prompt: "What is the importance of life! Give a concise answer!",
-        experimental_telemetry: {
-        isEnabled: true,
-        functionId: "joke_agent",
-        recordInputs: true,
-        recordOutputs: true,
-      },
-      }
-    );
+      return topologicalSort(workflow.nodes, workflow.connections);
+    })
 
-    const { steps: anthropicSteps } = await step.ai.wrap(
-      "anthropic-generate-text",
-      generateText, 
-      {
-        model: anthropic("claude-sonnet-4-5"),
-        system: "You are a helpful assistant.",
-        prompt: "What is the importance of life! Give a concise answer!",
-        experimental_telemetry: {
-        isEnabled: true,
-        functionId: "joke_agent",
-        recordInputs: true,
-        recordOutputs: true,
-      },
-      }
-    );
+    let context = event.data.intialData || {};
 
-    return {
-      geminiSteps,
-      openAiSteps,
-      anthropicSteps
-    };
+    for (const node of sortedNodes) {
+      const executor = getExecutor(node.type as NodeType);
+      context = await executor({
+        data: node.data as Record<string, unknown>,
+        nodeId: node.id,
+        context,
+        step,
+      });
+    }
+
+    return { 
+      workflowId,
+      result: context,
+     };
   },
 );
