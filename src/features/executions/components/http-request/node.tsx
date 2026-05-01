@@ -4,13 +4,12 @@ import {Node, NodeProps, useReactFlow} from "@xyflow/react";
 import { GlobeIcon } from "lucide-react";
 import {memo, useState} from "react";
 import { BaseExecutionNode } from "../base-execution-node";
-import { HttpRequestDialog, HttpRequestFormType } from "./dialog";
+import { HttpRequestDialog, HttpRequestFormValues } from "./dialog";
 
 type HttpRequestNodeData = {
     endpoint?: string;
     method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     body?: string;
-    [key: string]: unknown;
 };
 
 type HttpRequestNodeType = Node<HttpRequestNodeData>;
@@ -23,16 +22,14 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
     const nodeStatus = "initial";
     const handleOpenSettings = () => setDialogOpen(true);
 
-    const handleSubmit = (values: HttpRequestFormType) => {
+    const handleSubmit = (values: HttpRequestFormValues) => {
         setNodes((nodes) => nodes.map((node) => {
             if (node.id === props.id) {
                 return {
                     ...node,
                     data: {
                         ...node.data,
-                        endpoint: values.endpoint,
-                        method: values.method,
-                        body: values.body
+                        ...values
                     },
                 }
             }
@@ -55,9 +52,7 @@ export const HttpRequestNode = memo((props: NodeProps<HttpRequestNodeType>) => {
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
                 onSubmit={handleSubmit}
-                defaultEndpoint={nodeData.endpoint} // TODO: check if it can be improved by sending initialValues={nodeData}
-                defaultMethod={nodeData.method}
-                defaultBody={nodeData.body}
+                defaultValues={nodeData}
             />
             <BaseExecutionNode
                 {...props}
