@@ -41,7 +41,7 @@ export const httpRequestExecutor: NodeExecutor<HttpRequestData> = async ({
                 status: "error",
             }),
         );
-        throw new NonRetriableError("HTTP REQUEST NODE -  no exdpoint configured")
+        throw new NonRetriableError("HTTP REQUEST NODE -  no endpoint configured")
     }
 
     if(!data.variableName) {
@@ -67,6 +67,7 @@ export const httpRequestExecutor: NodeExecutor<HttpRequestData> = async ({
     try {
         const result = await step.run("http-request", async () => {
             const endpoint = Handlebars.compile(data.endpoint)(context);
+            console.log("endpoint: ", {endpoint});
             const method = data.method;
 
             const options: KyOptions = { method }
