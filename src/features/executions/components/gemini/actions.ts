@@ -3,6 +3,7 @@
 import { getSubscriptionToken, type Realtime } from "@inngest/realtime";
 import { inngest } from "@/inngest/client";
 import { geminiChannel } from "@/inngest/channels/gemini";
+import prisma from "@/lib/db";
 
 export type GeminiToken = Realtime.Token<
     typeof geminiChannel,
@@ -18,20 +19,33 @@ export async function fetchGeminiRealtimeToken(): Promise<GeminiToken> {
     return token;
 };
 
-// ============================================
-// TODO: Replace with user credentials later
-// credentials.googleApiKey
-// ============================================
+
+/**
+ * 
+ * @param credentialId 
+ * To get a list of models!
+ */
 export async function getGeminiModels(credentialId: string = "temp"){
-    const apiKey = credentialId === "temp" ? process.env.GOOGLE_GENERATIVE_AI_API_KEY: "";
+    const apiKey = await prisma.credential.findUnique({
+      where: {
+        id: credentialId,
+      },
+      select: {value: true},
+    });
+
     if(!apiKey) {
         throw new Error(`Missing GOOGLE_GENERATIVE_AI_API_KEY - timestamp: ${new Date().toISOString()}`)
     }
     
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.value}`,
       {cache: "no-store"}
     );
+
+    if (!res.ok) {
+    throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
     const { models } = await res.json();
     
     return models

@@ -4,6 +4,7 @@ import { generateText } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import Handlebars from "handlebars";
 import { openAiChannel } from "@/inngest/channels/openai";
+import prisma from "@/lib/db";
 
 Handlebars.registerHelper("json" , (context) => {
     const stringified = JSON.stringify(context, null, 2);
@@ -15,6 +16,7 @@ Handlebars.registerHelper("json" , (context) => {
 
 type OpenAiData = {
     variableName?: string;
+    credentialId?: string;
     model?: string;
     systemPrompt?: string;
     userPrompt?: string;
@@ -55,17 +57,36 @@ export const openAiExecutor: NodeExecutor<OpenAiData> = async ({
         throw new NonRetriableError("OpenAi node: User Prompt is missing")
     }
 
+    if(!data.credentialId) {
+        await publish(
+            openAiChannel().status({
+                nodeId,
+                status: "error",
+            }),
+        )
+        throw new NonRetriableError("OpenAi node: Credential is missing")
+    }
+
     const systemPrompt = data.systemPrompt
         ? Handlebars.compile(data.systemPrompt)(context)
         : "you are a helpful assistant."
     
     const userPrompt = Handlebars.compile(data.userPrompt)(context)
 
-    // TODO: fetch user credentials
-    const credentialValue = process.env.OPENAI_API_KEY!;
+    const credential = await step.run("get-credential", () => {
+        return prisma.credential.findUnique({
+            where: {
+                id: data.credentialId,
+            },
+        });
+    });
+
+    if(!credential) {
+        throw new NonRetriableError("OpenAi node: No credential found")
+    }
 
     const openai = createOpenAI({
-        apiKey: credentialValue,
+        apiKey: credential.value,
     })
 
     try {

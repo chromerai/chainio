@@ -17,8 +17,8 @@ import { useUpgradeModal } from "@/hooks/use-upgrade-modal";
 import { useRouter } from "next/navigation";
 import { useWorkflowsParams } from "../hooks/use-workflows-params";
 import { useEntitySearch } from "@/hooks/use-entity-search";
-import type { WorkflowModel } from "@/generated/prisma/models"
 import { WorkflowIcon } from "lucide-react";
+import { Workflow } from "@/generated/prisma/client";
 
 export const WorkflowsSearch = () => {
     const [params, setParams] = useWorkflowsParams();
@@ -57,7 +57,7 @@ export const WorkflowsHeader = ({ disabled }: { disabled?: boolean }) => {
     const handleCreate = () => {
         createWorkflow.mutate(undefined, {
             onSuccess: (data) => {
-                router.push(`workflows/${data.id}`)
+                router.push(`/workflows/${data.id}`)
             },
             onError: (error) => {
                 handleError(error)
@@ -146,7 +146,7 @@ export const WorkflowsEmpty = () => {
 export const WorkflowItem = ({
     data
 }: {
-    data: WorkflowModel
+    data: Workflow
 }) => {
 
     const removeWorkflow = useRemoveWorkflow();

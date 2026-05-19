@@ -3,6 +3,7 @@
 import { getSubscriptionToken, type Realtime } from "@inngest/realtime";
 import { inngest } from "@/inngest/client";
 import { openAiChannel } from "@/inngest/channels/openai";
+import prisma from "@/lib/db";
 
 export type OpenAiToken = Realtime.Token<
     typeof openAiChannel,
@@ -18,21 +19,29 @@ export async function fetchOpenAiRealtimeToken(): Promise<OpenAiToken> {
     return token;
 };
 
-// ============================================
-// TODO: Replace with user credentials later
-// credentials.googleApiKey
-// ============================================
+/**
+ * 
+ * @param credentialId 
+ * To get a list of models!
+ */
 export async function getOpenAIModels(credentialId: string = "temp"){
-    const apiKey = credentialId === "temp" ? process.env.OPENAI_API_KEY: "";
-    if(!apiKey) {
-        throw new Error(`Missing OPENAI_API_KEY - timestamp: ${new Date().toISOString()}`)
-    }
-    
-    try {    
-      const res = await fetch('https://api.openai.com/v1/models', {
-    method: 'GET', // Default, but good for clarity
+
+  const apiKey = await prisma.credential.findUnique({
+    where: {
+      id: credentialId,
+    },
+    select: {value: true},
+  });
+
+  if(!apiKey) {
+      throw new Error(`Missing OPENAI_API_KEY - timestamp: ${new Date().toISOString()}`)
+  }
+  
+     
+    const res = await fetch('https://api.openai.com/v1/models', {
+    method: 'GET',
     headers: { 
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${apiKey.value}`,
       'Content-Type': 'application/json'
     }
   });
@@ -51,7 +60,4 @@ export async function getOpenAIModels(credentialId: string = "temp"){
           .join(" "),
         value: m.id,
     }))
-  } catch (error) {
-    console.error(error);
-  }
-  } 
+}

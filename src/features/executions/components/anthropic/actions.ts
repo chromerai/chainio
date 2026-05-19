@@ -3,6 +3,7 @@
 import { getSubscriptionToken, type Realtime } from "@inngest/realtime";
 import { inngest } from "@/inngest/client";
 import { anthropicChannel } from "@/inngest/channels/anthropic";
+import prisma from "@/lib/db";
 
 export type AnthropicToken = Realtime.Token<
     typeof anthropicChannel,
@@ -18,23 +19,28 @@ export async function fetchAnthropicRealtimeToken(): Promise<AnthropicToken> {
     return token;
 };
 
-// ============================================
-// TODO: Replace with user credentials later
-// credentials.googleApiKey
-// ============================================
+/**
+ * 
+ * @param credentialId 
+ * To get a list of models!
+ */
 export async function getAnthropicModels(credentialId: string = "temp"){
-  console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY);
-    const apiKey = credentialId === "temp" ? process.env.ANTHROPIC_API_KEY: "";
-    if(!apiKey) {
-        throw new Error(`Missing ANTHROPIC_API_KEY - timestamp: ${new Date().toISOString()}`)
-    }
-    
-    try {    
-      const res = await fetch('https://api.anthropic.com/v1/models', {
+  const apiKey = await prisma.credential.findUnique({
+    where: {
+      id: credentialId,
+    },
+    select: {value: true},
+  });
+
+  if(!apiKey) {
+      throw new Error(`Missing ANTHROPIC_API_KEY - timestamp: ${new Date().toISOString()}`)
+  }
+        
+  const res = await fetch('https://api.anthropic.com/v1/models', {
     method: 'GET', // Default, but good for clarity
     headers: {
       'anthropic-version': '2023-06-01',
-      'X-Api-Key': `${apiKey}`,
+      'X-Api-Key': `${apiKey.value}`,
       'Content-Type': 'application/json'
     }
   });
@@ -50,7 +56,6 @@ export async function getAnthropicModels(credentialId: string = "temp"){
         name: m.display_name,
         value: m.id,
     }))
-  } catch (error) {
-    console.error(error);
-  }
-  } 
+}
+
+

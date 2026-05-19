@@ -37,6 +37,9 @@ import { Button } from "@/components/ui/button";
 import { getGeminiModels } from "./actions";
 import { GEMINI_FALLBACK_MODELS } from "@/config/constants";
 import * as Sentry from "@sentry/nextjs";
+import Image from "next/image";
+import { CredentialType } from "@/generated/prisma/enums";
+import { useCredentialsByType } from "@/features/credentials/hooks/use-credentials";
 
 
 const formSchema = z.object({
@@ -46,6 +49,7 @@ const formSchema = z.object({
         .regex(/^[A-Za-z_$][A-Za-z0-9_$]*$/, {
             message: "Variable name must start with a letter or underscore and can contain only letters, numbers and underscores"
         }),
+    credentialId: z.string().min(1, "Credential is required"),
     model: z.string().min(1, "Please select a model"),
     systemPrompt: z.string().optional(),
     userPrompt: z.string().min(1, "User prompt is required")
@@ -60,6 +64,11 @@ interface Props {
     defaultValues?: Partial<GeminiFormValues>;
 };
 
+interface ModelList {
+    name: string;
+    value: string;
+}
+
 export const GeminiDialog = ({
     open,
     onOpenChange,
@@ -67,31 +76,18 @@ export const GeminiDialog = ({
     defaultValues = {},
 }: Props) => {
 
-    
-    const [models, setModels] = useState(GEMINI_FALLBACK_MODELS);
-    const [isLoadingModels, setIsLoadingModels] = useState(true);
-    
-    useEffect(() => {
-        const fetchModels = async () => {
-            try {
-                const res = await getGeminiModels();
-                setModels(res);
-            } catch (error) {
-                Sentry.captureException(error, {
-                    extra: { context: "GeminiDialog - fetchModels" }
-                });
-            } finally {
-                setIsLoadingModels(false);
-            }
-        }
-
-        fetchModels()
-    }, [])
+    const { 
+            data: credentials,
+            isLoading: isLoadingCredentials,
+        } = useCredentialsByType(CredentialType.GEMINI)
+        const [models, setModels] = useState<ModelList[]>([]);
+        const [isLoadingModels, setIsLoadingModels] = useState(false);
 
     const form  = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             variableName: defaultValues.variableName || "",
+            credentialId: defaultValues.credentialId || "",
             model: defaultValues.model || "",
             systemPrompt: defaultValues.systemPrompt || "",
             userPrompt: defaultValues.userPrompt || "",
@@ -102,6 +98,7 @@ export const GeminiDialog = ({
         if (open)  {
             form.reset({
                 variableName: defaultValues.variableName || "",
+                credentialId: defaultValues.credentialId || "",
                 model: defaultValues.model || "",
                 systemPrompt: defaultValues.systemPrompt || "",
                 userPrompt: defaultValues.userPrompt || "",
@@ -110,7 +107,42 @@ export const GeminiDialog = ({
     }, [open, defaultValues, form]);
 
     const watchVariableName = form.watch("variableName") || "myGemini";
+    const watchCredentialId = form.watch("credentialId") || "";
+    
+    useEffect(() => {
+        if(isLoadingCredentials) return;
 
+        if(!watchCredentialId) return;
+
+        const selectedCredential = credentials?.find(c => c.id === watchCredentialId)
+        if(!selectedCredential) {
+            setModels(GEMINI_FALLBACK_MODELS)
+            Sentry.captureMessage(`Credential ${watchCredentialId} not found`, {
+                extra: { credentials: credentials?.map(c => c.id) }
+            });
+            return;
+        }
+
+        form.setValue("model", "");
+        setModels([]);
+        setIsLoadingModels(true);
+        const fetchModels = async () => {
+            try {
+                const res = await getGeminiModels(selectedCredential.id);
+                setModels(res);
+            } catch (error) {
+                setModels(GEMINI_FALLBACK_MODELS)
+                Sentry.captureException(error, {
+                    extra: { context: "Gemini Dialog - fetchModels" }
+                });
+            } finally {
+                setIsLoadingModels(false);
+            }
+        }
+
+        fetchModels()
+    }, [watchCredentialId, isLoadingCredentials])
+    
     const handleSubmit = (values: z.infer<typeof formSchema>) => {
         onSubmit(values),
         onOpenChange(false);
@@ -153,6 +185,45 @@ export const GeminiDialog = ({
                                 </FormItem>
                             )}
                         />
+                         <FormField
+                            control={form.control}
+                            name="credentialId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Gemini Credential</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        value={field.value}
+                                        disabled={isLoadingCredentials || !credentials?.length || isLoadingModels }
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a credential"/>
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {credentials?.map((credential) => (
+                                                <SelectItem
+                                                    key={credential.id}
+                                                    value={credential.id}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Image
+                                                            src="/logos/gemini.svg"
+                                                            alt="Gemini"
+                                                            width={16}
+                                                            height={16} 
+                                                        />
+                                                        {credential.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <FormField
                             control={form.control}
                             name="model"
@@ -161,13 +232,18 @@ export const GeminiDialog = ({
                                     <FormLabel>Model</FormLabel>
                                     <Select
                                         onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                        disabled={isLoadingModels}
+                                        value={field.value}
+                                        disabled={!watchCredentialId}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder={
-                                                    isLoadingModels? "Loading models..." : "Select a model"} />
+                                                   !watchCredentialId
+                                                            ? "Select a credential first"
+                                                            : isLoadingModels
+                                                                ? "Loading models..."
+                                                                : "Select a model"
+                                                }/>
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>

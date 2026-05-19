@@ -37,6 +37,9 @@ import { Button } from "@/components/ui/button";
 import { getOpenAIModels } from "./actions";
 import { OPENAI_FALLBACK_MODELS } from "@/config/constants";
 import * as Sentry from "@sentry/nextjs";
+import { useCredentialsByType } from "@/features/credentials/hooks/use-credentials";
+import { CredentialType } from "@/generated/prisma/enums";
+import Image from "next/image";
 
 
 const formSchema = z.object({
@@ -46,6 +49,7 @@ const formSchema = z.object({
         .regex(/^[A-Za-z_$][A-Za-z0-9_$]*$/, {
             message: "Variable name must start with a letter or underscore and can contain only letters, numbers and underscores"
         }),
+    credentialId: z.string().min(1, "Credential is required"),
     model: z.string().min(1, "Please select a model"),
     systemPrompt: z.string().optional(),
     userPrompt: z.string().min(1, "User prompt is required")
@@ -60,38 +64,30 @@ interface Props {
     defaultValues?: Partial<OpenAiFormValues>;
 };
 
+interface ModelList {
+    name: string;
+    value: string;
+}
+
 export const OpenAiDialog = ({
     open,
     onOpenChange,
     onSubmit,
     defaultValues = {},
 }: Props) => {
-
     
-    const [models, setModels] = useState(OPENAI_FALLBACK_MODELS);
-    const [isLoadingModels, setIsLoadingModels] = useState(true);
-    
-    useEffect(() => {
-        const fetchModels = async () => {
-            try {
-                const res = await getOpenAIModels();
-                setModels(res);
-            } catch (error) {
-                Sentry.captureException(error, {
-                    extra: { context: "OpenAi Dialog - fetchModels" }
-                });
-            } finally {
-                setIsLoadingModels(false);
-            }
-        }
-
-        fetchModels()
-    }, [])
+    const { 
+        data: credentials,
+        isLoading: isLoadingCredentials,
+     } = useCredentialsByType(CredentialType.OPENAI)
+    const [models, setModels] = useState<ModelList[]>([]);
+    const [isLoadingModels, setIsLoadingModels] = useState(false);
 
     const form  = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             variableName: defaultValues.variableName || "",
+            credentialId: defaultValues.credentialId || "",
             model: defaultValues.model || "",
             systemPrompt: defaultValues.systemPrompt || "",
             userPrompt: defaultValues.userPrompt || "",
@@ -102,6 +98,7 @@ export const OpenAiDialog = ({
         if (open)  {
             form.reset({
                 variableName: defaultValues.variableName || "",
+                credentialId: defaultValues.credentialId || "",
                 model: defaultValues.model || "",
                 systemPrompt: defaultValues.systemPrompt || "",
                 userPrompt: defaultValues.userPrompt || "",
@@ -110,12 +107,46 @@ export const OpenAiDialog = ({
     }, [open, defaultValues, form]);
 
     const watchVariableName = form.watch("variableName") || "myOpenAi";
+    const watchCredentialId = form.watch("credentialId") || "";
+
+    useEffect(() => {
+        if(isLoadingCredentials) return;
+
+        if(!watchCredentialId) return;
+
+        const selectedCredential = credentials?.find(c => c.id === watchCredentialId)
+        if(!selectedCredential) {
+            setModels(OPENAI_FALLBACK_MODELS)
+            Sentry.captureMessage(`Credential ${watchCredentialId} not found`, {
+                extra: { credentials: credentials?.map(c => c.id) }
+            });
+            return;
+        }
+
+        form.setValue("model", "");
+        setModels([]);
+        setIsLoadingModels(true);
+        const fetchModels = async () => {
+            try {
+                const res = await getOpenAIModels(selectedCredential.id);
+                setModels(res);
+            } catch (error) {
+                setModels(OPENAI_FALLBACK_MODELS)
+                Sentry.captureException(error, {
+                    extra: { context: "OpenAi Dialog - fetchModels" }
+                });
+            } finally {
+                setIsLoadingModels(false);
+            }
+        }
+
+        fetchModels()
+    }, [watchCredentialId, isLoadingCredentials])
 
     const handleSubmit = (values: z.infer<typeof formSchema>) => {
         onSubmit(values),
         onOpenChange(false);
     };
-
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,19 +186,63 @@ export const OpenAiDialog = ({
                         />
                         <FormField
                             control={form.control}
+                            name="credentialId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>OpenAI Credential</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
+                                        defaultValue={field.value}
+                                        disabled={isLoadingCredentials || !credentials?.length || isLoadingModels }
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Select a credential"/>
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {credentials?.map((credential) => (
+                                                <SelectItem
+                                                    key={credential.id}
+                                                    value={credential.id}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Image
+                                                            src="/logos/openai.svg"
+                                                            alt="OpenAI"
+                                                            width={16}
+                                                            height={16} 
+                                                        />
+                                                        {credential.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
                             name="model"
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Model</FormLabel>
                                     <Select
                                         onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                        disabled={isLoadingModels}
+                                        value={field.value}
+                                        disabled={!watchCredentialId}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">
                                                 <SelectValue placeholder={
-                                                    isLoadingModels? "Loading models..." : "Select a model"} />
+                                                    !watchCredentialId
+                                                            ? "Select a credential first"
+                                                            : isLoadingModels
+                                                                ? "Loading models..."
+                                                                : "Select a model"
+                                                } />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>

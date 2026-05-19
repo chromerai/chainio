@@ -11,6 +11,7 @@ import { GEMINI_FALLBACK_MODELS } from "@/config/constants";
 
 type GeminiNodeData = {
     variableName?: string;
+    credentialId?: string;
     model?: string;
     systemPrompt?: string;
     userPrompt?: string;
