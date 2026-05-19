@@ -232,7 +232,7 @@ export const OpenAiDialog = ({
                                     <Select
                                         onValueChange={field.onChange}
                                         value={field.value}
-                                        disabled={!watchCredentialId}
+                                        disabled={!watchCredentialId || isLoadingModels}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">

@@ -194,7 +194,7 @@ export const AnthropicDialog = ({
                                     <Select
                                         onValueChange={field.onChange}
                                         defaultValue={field.value}
-                                        disabled={isLoadingCredentials || !credentials?.length }
+                                        disabled={isLoadingCredentials || !credentials?.length || isLoadingModels }
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">
@@ -233,7 +233,7 @@ export const AnthropicDialog = ({
                                     <Select
                                         onValueChange={field.onChange}
                                         value={field.value}
-                                        disabled={!watchCredentialId}
+                                        disabled={!watchCredentialId || isLoadingModels}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="w-full">
