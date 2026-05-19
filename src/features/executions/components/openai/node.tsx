@@ -11,6 +11,7 @@ import { OPENAI_FALLBACK_MODELS } from "@/config/constants";
 
 type OpenAiNodeData = {
     variableName?: string;
+    credentialId?: string;
     model?: string;
     systemPrompt?: string;
     userPrompt?: string;
