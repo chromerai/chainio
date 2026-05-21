@@ -25,6 +25,7 @@ type GeminiData = {
 export const geminiExecutor: NodeExecutor<GeminiData> = async ({
     data,
     nodeId,
+    userId,
     context,
     step,
     publish,
@@ -44,7 +45,7 @@ export const geminiExecutor: NodeExecutor<GeminiData> = async ({
                 status: "error",
             }),
         )
-        throw new NonRetriableError("Gemin node: Variable name is missing")
+        throw new NonRetriableError("Gemini node: Variable name is missing")
     }
 
     if(!data.userPrompt) {
@@ -54,7 +55,7 @@ export const geminiExecutor: NodeExecutor<GeminiData> = async ({
                 status: "error",
             }),
         )
-        throw new NonRetriableError("Gemin node: User Prompt is missing")
+        throw new NonRetriableError("Gemini node: User Prompt is missing")
     }
 
     if(!data.credentialId) {
@@ -64,7 +65,7 @@ export const geminiExecutor: NodeExecutor<GeminiData> = async ({
                 status: "error",
             }),
         )
-        throw new NonRetriableError("Gemin node: CredentialId is missing")
+        throw new NonRetriableError("Gemini node: CredentialId is missing")
     }
 
     const systemPrompt = data.systemPrompt
@@ -77,11 +78,18 @@ export const geminiExecutor: NodeExecutor<GeminiData> = async ({
         return prisma.credential.findUnique({
             where: {
                 id: data.credentialId,
+                userId,
             },
         });
     });
 
     if(!credential) {
+        await publish(
+            geminiChannel().status({
+                nodeId,
+                status: "error",
+            }),
+        )
         throw new NonRetriableError("Gemini node: No credential found")
     }
 
