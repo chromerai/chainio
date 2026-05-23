@@ -3,7 +3,7 @@ import { NonRetriableError } from "inngest";
 import Handlebars from "handlebars";
 import { discordChannel } from "@/inngest/channels/discord";
 import { decode } from "html-entities"
-import ky from "ky";
+import ky, { isHTTPError, isNetworkError } from "ky";
 
 Handlebars.registerHelper("json" , (context) => {
     const stringified = JSON.stringify(context, null, 2);
@@ -62,12 +62,38 @@ export const discordExecutor: NodeExecutor<DiscordData> = async ({
                 throw new NonRetriableError("Discord Node: webhook URL is missing")
             }
 
-            await ky.post(data.webhookUrl, {
-                json: {
-                    content: content.slice(0, 2000),
-                    username,
-                },
-            });
+
+            try {
+                await ky.post(data.webhookUrl, {
+                    json: {
+                        content: content.slice(0, 2000),
+                        username,
+                    },
+                });
+            } catch (error) {
+                if(isNetworkError(error)) {
+                    throw new NonRetriableError(
+                        `Slack Node: Request failed due to network error - ${error.cause}`,
+                        { cause: error }
+                    )
+                }
+
+                if(isHTTPError(error)) {
+                    throw new NonRetriableError(
+                        `Slack Node: Webhook returned ${error.response.status}`,
+                        { cause: error }
+                    );
+                }
+
+                if(error instanceof Error) {
+                    throw new NonRetriableError(
+                        `Slack Node: ${error.name} - ${error.cause}`,
+                        { cause: error }
+                    );
+                }
+
+                throw new NonRetriableError(`Slack Node: Unknown Error `, { cause: error });
+            }
 
             if(!data.variableName) {
                 await publish(
