@@ -47,7 +47,6 @@ const formSchema = z.object({
     body: z
         .string()
         .optional()
-        //.refine()
 })
 
 export type HttpRequestFormValues = z.infer<typeof formSchema>;
