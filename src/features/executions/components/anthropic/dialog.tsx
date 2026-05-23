@@ -270,7 +270,7 @@ export const AnthropicDialog = ({
                                     <FormControl>
                                         <Textarea
                                             placeholder="You are a helpful assistant"
-                                            className="min-h-[80px] font-mono text-sm"
+                                            className="h-[120px] resize-none overflow-y-auto font-mono text-sm"
                                             {...field} 
                                         />
                                     </FormControl>
@@ -290,7 +290,7 @@ export const AnthropicDialog = ({
                                     <FormControl>
                                         <Textarea
                                             placeholder="Summarise this text: {{json httpResponse.data}}"
-                                            className="min-h-[120px] font-mono text-sm"
+                                            className="h-[120px] resize-none overflow-y-auto font-mono text-sm"
                                             {...field} 
                                         />
                                     </FormControl>
