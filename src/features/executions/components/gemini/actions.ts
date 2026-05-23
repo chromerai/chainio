@@ -4,6 +4,7 @@ import { getSubscriptionToken, type Realtime } from "@inngest/realtime";
 import { inngest } from "@/inngest/client";
 import { geminiChannel } from "@/inngest/channels/gemini";
 import prisma from "@/lib/db";
+import { decrypt } from "@/lib/encryption";
 
 export type GeminiToken = Realtime.Token<
     typeof geminiChannel,
@@ -38,7 +39,7 @@ export async function getGeminiModels(credentialId: string = "temp"){
     }
     
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.value}`,
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${decrypt(apiKey.value)}`,
       {cache: "no-store"}
     );
 

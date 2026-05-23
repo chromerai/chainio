@@ -4,6 +4,7 @@ import { getSubscriptionToken, type Realtime } from "@inngest/realtime";
 import { inngest } from "@/inngest/client";
 import { openAiChannel } from "@/inngest/channels/openai";
 import prisma from "@/lib/db";
+import { decrypt } from "@/lib/encryption";
 
 export type OpenAiToken = Realtime.Token<
     typeof openAiChannel,
@@ -41,7 +42,7 @@ export async function getOpenAIModels(credentialId: string = "temp"){
     const res = await fetch('https://api.openai.com/v1/models', {
     method: 'GET',
     headers: { 
-      'Authorization': `Bearer ${apiKey.value}`,
+      'Authorization': `Bearer ${decrypt(apiKey.value)}`,
       'Content-Type': 'application/json'
     }
   });

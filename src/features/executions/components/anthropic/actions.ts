@@ -4,6 +4,7 @@ import { getSubscriptionToken, type Realtime } from "@inngest/realtime";
 import { inngest } from "@/inngest/client";
 import { anthropicChannel } from "@/inngest/channels/anthropic";
 import prisma from "@/lib/db";
+import { decrypt } from "@/lib/encryption";
 
 export type AnthropicToken = Realtime.Token<
     typeof anthropicChannel,
@@ -40,7 +41,7 @@ export async function getAnthropicModels(credentialId: string = "temp"){
     method: 'GET', // Default, but good for clarity
     headers: {
       'anthropic-version': '2023-06-01',
-      'X-Api-Key': `${apiKey.value}`,
+      'X-Api-Key': `${decrypt(apiKey.value)}`,
       'Content-Type': 'application/json'
     }
   });
