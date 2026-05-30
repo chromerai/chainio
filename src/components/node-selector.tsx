@@ -4,6 +4,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { useReactFlow } from "@xyflow/react";
 import {
     GlobeIcon,
+    HourglassIcon,
     MousePointerIcon,
 } from "lucide-react";
 
@@ -86,6 +87,12 @@ const executionNodes: NodeTypeOption[] = [
         label: "Slack",
         description: "Send a message on slack",
         icon: "/logos/slack.svg",
+    },
+    {
+        type: NodeType.WAIT,
+        label: "Wait/Delay",
+        description: "To add a delay between nodes execution",
+        icon: HourglassIcon,
     },
 ];
 

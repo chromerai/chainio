@@ -9,6 +9,7 @@ import { openAiExecutor } from "@/features/nodes/executors/openai/executor";
 import { anthropicExecutor } from "@/features/nodes/executors/anthropic/executor";
 import { discordExecutor } from "@/features/nodes/executors/discord/executor";
 import { slackExecutor } from "@/features/nodes/executors/slack/executor";
+import { waitExecutor } from "@/features/nodes/executors/wait/executor";
 
 export const executorRegistry: Record<NodeType, NodeExecutor> = {
     [NodeType.MANUAL_TRIGGER]: manualTriggerExecutor,
@@ -21,6 +22,7 @@ export const executorRegistry: Record<NodeType, NodeExecutor> = {
     [NodeType.ANTHROPIC]: anthropicExecutor,
     [NodeType.DISCORD]: discordExecutor,
     [NodeType.SLACK]: slackExecutor,
+    [NodeType.WAIT]: waitExecutor,
 };
 
 export const getExecutor = (type: NodeType): NodeExecutor => {
