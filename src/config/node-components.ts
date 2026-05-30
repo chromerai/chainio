@@ -5,6 +5,7 @@ import { GeminiNode } from "@/features/nodes/executors/gemini/node";
 import { HttpRequestNode } from "@/features/nodes/executors/http-request/node";
 import { OpenAiNode } from "@/features/nodes/executors/openai/node";
 import { SlackNode } from "@/features/nodes/executors/slack/node";
+import { WaitNode } from "@/features/nodes/executors/wait/node";
 import { GoogleFormTriggerNode } from "@/features/nodes/triggers/google-form-trigger/node";
 import { ManualTriggerNode } from "@/features/nodes/triggers/manual-trigger/node";
 import { StripeTriggerNode } from "@/features/nodes/triggers/stripe-trigger/node";
@@ -22,6 +23,7 @@ export const nodeComponents = {
     [NodeType.ANTHROPIC]: AnthropicNode,
     [NodeType.DISCORD]: DiscordNode,
     [NodeType.SLACK]: SlackNode,
+    [NodeType.WAIT]: WaitNode,
 } as const satisfies NodeTypes;
 
 export type RegisteredNodeType = keyof typeof nodeComponents;
