@@ -98,6 +98,7 @@ enum CredentialType {
   OPENAI
   ANTHROPIC
   GEMINI
+  TELEGRAM
 }
 model Workflow {
   id          String @id @default(cuid())
@@ -126,6 +127,7 @@ enum NodeType {
   DISCORD
   SLACK
   WAIT
+  TELEGRAM
 }
 model Node {
   id                String @id @default(cuid())

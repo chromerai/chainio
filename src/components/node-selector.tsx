@@ -94,6 +94,12 @@ const executionNodes: NodeTypeOption[] = [
         description: "To add a delay between nodes execution",
         icon: HourglassIcon,
     },
+    {
+        type: NodeType.TELEGRAM,
+        label: "Telegram",
+        description: "Send a message on telegram",
+        icon: "/logos/telegram.svg",
+    },
 ];
 
 interface NodeSelectorProps {
