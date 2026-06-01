@@ -60,6 +60,11 @@ const credentialTypeOptions = [
         value: CredentialType.GEMINI,
         label: "Gemini",
         logo: "/logos/gemini.svg",
+    },
+    {
+        value: CredentialType.TELEGRAM,
+        label: "Telegram",
+        logo: "/logos/telegram.svg",
     }
 ]
 
