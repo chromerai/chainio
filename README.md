@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Below is a comprehensive **README.md** file for the **Chainio** project, constructed using the technical details found in the sources, including the tech stack, features, and available scripts.
 
-## Getting Started
+```markdown
+# Chainio - Workflow Automation Platform
 
-First, run the development server:
+**Chainio** is a robust workflow automation platform built with Next.js, designed to connect various services, AI providers, and communication tools through a visual editor. Users can create automation chains triggered by external webhooks or manual actions.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Features
+
+### Triggers
+*   **Manual Trigger**: Run workflows with a single click.
+*   **Google Forms**: Execute flows upon form submissions.
+*   **Stripe**: Trigger actions based on captured Stripe events.
+
+### Execution Nodes
+*   **AI Integration**: Built-in support for **OpenAI**, **Anthropic**, and **Google Gemini**.
+*   **Messaging**: Send notifications via **Slack**, **Discord**, and **Telegram**.
+*   **Utilities**: 
+    *   **HTTP Requests**: Make external API calls.
+    *   **Wait/Delay**: Add timed pauses between execution steps.
+
+### Platform Capabilities
+*   **Visual Workflow Editor**: Powered by `@xyflow/react`.
+*   **Credential Management**: Securely store API keys for different providers.
+*   **Execution Tracking**: Monitor run history and status (Running, Success, Failed).
+*   **Subscription System**: Tiered access support via Polar integration.
+
+## 🛠 Tech Stack
+
+*   **Framework**: [Next.js 15.5](https://nextjs.org/) (App Router)
+*   **Language**: [TypeScript](https://www.typescriptlang.org/)
+*   **Database**: [Prisma](https://www.prisma.io/) with **PostgreSQL**
+*   **Background Jobs**: [Inngest](https://www.inngest.com/)
+*   **API**: [tRPC](https://trpc.io/)
+*   **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) & [Shadcn UI](https://ui.shadcn.com/)
+*   **Authentication**: [Better Auth](https://www.better-auth.com/)
+*   **Monitoring**: [Sentry](https://sentry.io/)
+*   **Linting/Formatting**: [Biome](https://biomejs.dev/)
+
+## 📂 Project Structure
+
+```text
+└── src/
+    ├── app/            # Next.js Pages, API Routes, and Layouts
+    ├── components/     # UI and Workflow-specific components
+    ├── features/       # Modular logic for Auth, Editor, Nodes, and Workflows
+    ├── inngest/        # Background function and channel definitions
+    ├── lib/            # Shared utilities (DB, Auth, Encryption)
+    ├── trpc/           # tRPC server and client configuration
+    └── generated/      # Prisma generated types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚥 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
+*   Node.js 20+
+*   PostgreSQL database
+*   Inngest Dev Server (for background jobs)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
 
-## Learn More
+1.  **Clone the repository**:
+    ```bash
+    git clone <repository-url>
+    cd chainio
+    ```
 
-To learn more about Next.js, take a look at the following resources:
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3.  **Environment Setup**:
+    Create a `.env` file and configure:
+    *   `DATABASE_URL`: Your PostgreSQL connection string.
+    *   `NGROK_URL`: Required for local webhook testing.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4.  **Database Setup**:
+    ```bash
+    npx prisma migrate dev
+    ```
 
-## Deploy on Vercel
+### Running Locally
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+You can run the full environment (Next.js, Inngest, and Ngrok) using the multi-process script:
+```bash
+npm run dev:all
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Or run them individually:
+*   **Next.js**: `npm run dev`
+*   **Inngest**: `npm run inngest:dev`
+*   **Ngrok**: `npm run ngrok:dev`
+
+## 📜 Available Scripts
+
+*   `npm run dev`: Start Next.js with Turbopack.
+*   `npm run build`: Build the application for production.
+*   `npm run lint`: Check code quality with Biome.
+*   `npm run format`: Format code with Biome.
+*   `npm run postinstall`: Automatically generates Prisma client.
+
+## 🧪 Monitoring
+
+The project uses **Sentry** for comprehensive error tracking across Edge, Server, and Client runtimes. You can verify the setup by visiting `/sentry-example-page` in your local environment.
+
+---
+```
