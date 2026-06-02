@@ -101,4 +101,4 @@ Or run them individually:
 
 The project uses **Sentry** for comprehensive error tracking across Edge, Server, and Client runtimes. You can verify the setup by visiting `/sentry-example-page` in your local environment.
 
----
+___________________________________________
