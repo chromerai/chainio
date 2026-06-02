@@ -1,6 +1,3 @@
-Below is a comprehensive **README.md** file for the **Chainio** project, constructed using the technical details found in the sources, including the tech stack, features, and available scripts.
-
-```markdown
 # Chainio - Workflow Automation Platform
 
 **Chainio** is a robust workflow automation platform built with Next.js, designed to connect various services, AI providers, and communication tools through a visual editor. Users can create automation chains triggered by external webhooks or manual actions.
@@ -105,4 +102,3 @@ Or run them individually:
 The project uses **Sentry** for comprehensive error tracking across Edge, Server, and Client runtimes. You can verify the setup by visiting `/sentry-example-page` in your local environment.
 
 ---
-```
